@@ -8,6 +8,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Properties;
@@ -23,22 +24,26 @@ import jdbm.recman.*;
 import jdbm.helper.*;
 import jdbm.htree.*;
 import jdbm.*;
+
+
 public class DBApp {
-	String DBname;
+final	String DBname = "xxx" ;
 	File metadata;
 	BufferedWriter bfw;
 	BufferedReader bfr;   
- BTree currentTree = null;
-RecordManager recman;
+//ArrayList <BTree> currentTrees ;
+ Properties    props = new Properties();
+RecordManager recman= RecordManagerFactory.createRecordManager( DBname, props ); ;
 static Tuple         tuple = new Tuple();
 static TupleBrowser  browser;
-	Properties    props = new Properties();
+	
 
 	
 	public static void main(String []args) throws DBAppException, IOException{
 		DBApp x =new DBApp();
-		
-		Hashtable <String,String> htblColNameType = new Hashtable<String,String>();
+		x.init();
+		//System.out.println("Array size: " +x.currentTrees.size());
+	Hashtable <String,String> htblColNameType = new Hashtable<String,String>();
 		htblColNameType.put("Name", "String");
 		htblColNameType.put("ID", "Integer");
 		htblColNameType.put("Age", "Integer");
@@ -47,9 +52,8 @@ static TupleBrowser  browser;
 		htblColNameRefs.put("Name", "null");
 		htblColNameRefs.put("ID", "null");
 		htblColNameRefs.put("Age", "null");
-		x.createTable("Employee", htblColNameType,htblColNameRefs,
-				"ID");
-		/*
+		x.createTable("Employee2", htblColNameType,htblColNameRefs,"ID");
+		
 		 Hashtable htblColNameValue1 = new Hashtable <String,String>();
 	     	htblColNameValue1.put("ID", "1");
 	     	htblColNameValue1.put("Name", "sameh");
@@ -64,24 +68,32 @@ static TupleBrowser  browser;
 			     	htblColNameValue3.put("ID", "3");
 			     	htblColNameValue3.put("Name", "sameh");
 			     	htblColNameValue3.put("Age", "21");
-	    */
+	    
+	    
 			     	 Hashtable htblColNameValue5 = new Hashtable <String,String>();
-				     	htblColNameValue5.put("ID", "5");
+				     	htblColNameValue5.put("ID", "6");
 				     	htblColNameValue5.put("Name", "sameh");
 				     	htblColNameValue5.put("Age", "21");
-	     
-		//insertIntoTable("Employee", htblColNameValue1);
-	     //	insertIntoTable("Employee", htblColNameValue2);
-	     	//insertIntoTable("Employee", htblColNameValue3);
-	     	//x.insertIntoTable("Employee", htblColNameValue5);
-				     	 System.out.println( x.currentTree.size());
+	   
+		x.insertIntoTable("Employee2", htblColNameValue1);
+    	// System.out.println( x.currentTree.size());
+
+		x.insertIntoTable("Employee2", htblColNameValue2);
+    	 //System.out.println( x.currentTree.size());
+
+x.insertIntoTable("Employee2", htblColNameValue3);
+ //System.out.println( x.currentTree.size());
+
+//x.insertIntoTable("Employee2", htblColNameValue5);
+				     	// System.out.println( x.currentTree.size());
 	     	
 	}
 	
 	public DBApp() throws IOException {
 		// TODO Auto-generated constructor stub
-		this.metadata = new File("metadata.txt");
-		metadata.createNewFile();
+	this.metadata = new File("metadata.txt");
+	if (!metadata.exists()){	
+	metadata.createNewFile();
 		FileWriter temp = new FileWriter(metadata);
         bfw = new BufferedWriter(temp);
         bfw.write("TableName");
@@ -98,6 +110,8 @@ static TupleBrowser  browser;
 		bfw.newLine();
 		bfw.flush();
 		bfw.close();
+		//currentTrees = new ArrayList <BTree>();
+	}
 	}
 	
 	
@@ -159,12 +173,12 @@ static TupleBrowser  browser;
 		bfw.close();
 		
 		// create a BTree for the new table
-        RecordManager recman = RecordManagerFactory.createRecordManager( DBname, props );
         BTree currentTree = BTree.createInstance( recman, new StringComparator() );
         recman.setNamedObject( strTableName+"_"+strKeyColName, currentTree.getRecid() );
         System.out.println( "Created a new empty BTree" );
-       recman.commit();
-       		
+       //this.currentTrees.add(currentTree);
+        recman.commit();
+       		System.out.println(recman.getNamedObject(strTableName+"_"+strKeyColName));
 	}
 	
 	public void createIndex(String strTableName,String strColName)throws DBAppException{
@@ -174,9 +188,9 @@ static TupleBrowser  browser;
 	
 	
 	public  void insertIntoTable(String strTableName, Hashtable <String,String> htblColNameValue)throws  IOException{
-		 System.out.println( currentTree.size());
-		
-		int enteredSoFar=this.currentTree.size();
+		  System.out.println(getPrimaryKey(strTableName));
+		//  BTree currentTree=currentTrees.get(0);
+	
     	BufferedReader bfr;
         String line2;    
         String fileName="metadata.txt";
@@ -187,12 +201,15 @@ static TupleBrowser  browser;
             line2=bfr.readLine();
             while((line2)!=null){
             	String[] current = line2.split(",");
-            	
+            	if(!tableNameExistsInDB(strTableName)){
+            		System.out.println("Table does not exist");
+            		return;
+            	}
             	if(current[0].equals(strTableName)){
             		System.out.println("file entered");
             		if(current[3].equals("True")){
                 		System.out.println("is primary key");
-            			if(htblColNameValue.get(current[1])==null){
+            			if(htblColNameValue.get(current[1])=="null"){
             				
             			System.out.println("Primary Key missing!");
 
@@ -214,6 +231,14 @@ static TupleBrowser  browser;
 	            line2=bfr.readLine();
             
             }
+            BTree currentTree=getCurrentTree(strTableName, getPrimaryKey(strTableName));
+    		int enteredSoFar=currentTree.size();
+    		//System.out.println("___________________________");
+    	      // browser = currentTree.browse();
+    	       //while ( browser.getNext( tuple ) ) {
+    	         //  print( tuple );
+    	          // System.out.println("___________________________");
+    	       //}
             System.out.println("sameh");
             result=result.substring(0, result.length()-1);
             if(enteredSoFar%3==0){
@@ -234,8 +259,6 @@ static TupleBrowser  browser;
     		out.flush();
     		out.close();    	
     		}
-       	
-       long recid = recman.getNamedObject( strTableName+"_"+ getPrimaryKey(strTableName));
     
            int temp = currentTree.size();
            int row_num;
@@ -246,18 +269,14 @@ static TupleBrowser  browser;
        currentTree.insert(htblColNameValue.get(getPrimaryKey(strTableName)), filenum+","+row_num, false);
        recman.commit();
        
+
        }
     	 catch(FileNotFoundException fex){
 	            fex.printStackTrace();
 	        }
         catch (IOException e) {
     	}
-       System.out.println("___________________________");
-       browser = currentTree.browse();
-       while ( browser.getNext( tuple ) ) {
-           print( tuple );
-           System.out.println("___________________________");
-       }
+       
 
 	}
 	
@@ -283,17 +302,18 @@ static TupleBrowser  browser;
 		
 }
 
-	private static boolean alreadyInsertedPrimaryKey(String toBeInserted,String tableName) throws IOException{
+	private  boolean alreadyInsertedPrimaryKey(String toBeInserted,String tableName) throws IOException{
 		boolean result = false;
-		int insertedSoFar = 1;
+		
+		int insertedSoFar = this.getCurrentTree(tableName, getPrimaryKey(tableName)).size();
 		
 		if(insertedSoFar>0){
 			double numOfFiles = Math.ceil(insertedSoFar/3);
 			System.out.println("number of files:"+numOfFiles);
 			System.out.println(getPrimaryIndex(tableName));
 if(insertedSoFar%3==0){
-			for(int i=0;i<numOfFiles-1;i++){
-		        String fileName="/home/sameh/workspace/DBengine/"+tableName+"_"+i+".txt";
+			for(int i=0;i<numOfFiles;i++){
+		        String fileName="/home/sameh/workspace1/DBengine/"+tableName+"_"+i+".txt";
 		        File file=new File(fileName);
 		      BufferedReader  bfr=new BufferedReader(new FileReader(file));
 	            String line2=bfr.readLine();
@@ -308,8 +328,8 @@ if(insertedSoFar%3==0){
 	            }
 		}
 else{
-	for(int i=0;i<numOfFiles;i++){
-        String fileName="/home/sameh/workspace/DBengine/"+tableName+"_"+i+".txt";
+	for(int i=0;i<=numOfFiles;i++){
+        String fileName="/home/sameh/workspace1/DBengine/"+tableName+"_"+i+".txt";
         File file=new File(fileName);
       BufferedReader  bfr=new BufferedReader(new FileReader(file));
         String line2=bfr.readLine();
@@ -409,5 +429,48 @@ else{
 	        }
 	        return buf.toString();
 	    }
+	   
+	   private  void init() throws IOException{
+			  String fileName="/home/sameh/workspace1/DBengine/metadata.txt";
+		        File file=new File(fileName);
+		      BufferedReader  bfr=new BufferedReader(new FileReader(file));
+		      String line2=bfr.readLine();
+	  while((line2)!=null){
+	  	String[] current = line2.split(",");
+	  	if(current[4].equals("True")) {
+	  	
+	  	
+	  		long  recid = recman.getNamedObject( current[0]+"_"+current[1] );
+			   System.out.println("loaded recid: "+recman.getNamedObject(current[0]+"_"+current[1]));
+
+	  		System.out.println("looking for tree: "+current[0]+"_"+current[1]);
+	  		System.out.println();
+	  		if(BTree.load( recman, recid)!=null){
+	  			System.out.println("___________________________");
+	  	       browser = BTree.load( recman, recid).browse();
+	  	       while ( browser.getNext( tuple ) ) {
+	  	           print( tuple );
+	  	           System.out.println("___________________________");
+	  	       }
+	  		}
+	  		else{
+	  			System.out.println("null tree");
+	  		}
+
+	  		//this.currentTrees.add(BTree.load( recman, recid));
+	  		
+	  	}
+	  	line2=bfr.readLine();
+	}
+		
+	   }
+	   
+	   private BTree getCurrentTree(String tableName, String colName) throws IOException{
+			 // System.out.println("Array size: "+currentTrees.size());
+
+		   System.out.println("loaded recid: "+recman.getNamedObject(tableName+"_"+colName));
+		   return BTree.load(recman,recman.getNamedObject(tableName+"_"+colName));
+	   }
 
 }
+
