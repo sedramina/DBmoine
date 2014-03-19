@@ -52,7 +52,9 @@ static TupleBrowser  browser;
 		htblColNameRefs.put("Name", "null");
 		htblColNameRefs.put("ID", "null");
 		htblColNameRefs.put("Age", "null");
-		x.createTable("Employee2", htblColNameType,htblColNameRefs,"ID");
+			//x.createTable("Employee", htblColNameType,htblColNameRefs,"ID");
+
+		//x.createTable("Employee2", htblColNameType,htblColNameRefs,"ID");
 		
 		 Hashtable htblColNameValue1 = new Hashtable <String,String>();
 	     	htblColNameValue1.put("ID", "1");
@@ -71,22 +73,23 @@ static TupleBrowser  browser;
 	    
 	    
 			     	 Hashtable htblColNameValue5 = new Hashtable <String,String>();
-				     	htblColNameValue5.put("ID", "6");
-				     	htblColNameValue5.put("Name", "sameh");
+				     	htblColNameValue5.put("ID", "7");
+				     	htblColNameValue5.put("Name", "mina");
 				     	htblColNameValue5.put("Age", "21");
 	   
-		x.insertIntoTable("Employee2", htblColNameValue1);
+		//x.insertIntoTable("Employee", htblColNameValue1);
     	// System.out.println( x.currentTree.size());
 
-		x.insertIntoTable("Employee2", htblColNameValue2);
+	//	x.insertIntoTable("Employee", htblColNameValue2);
     	 //System.out.println( x.currentTree.size());
 
-x.insertIntoTable("Employee2", htblColNameValue3);
+//x.insertIntoTable("Employee", htblColNameValue3);
  //System.out.println( x.currentTree.size());
 
-//x.insertIntoTable("Employee2", htblColNameValue5);
+//x.insertIntoTable("Employee", htblColNameValue5);
 				     	// System.out.println( x.currentTree.size());
 	     	
+				     	x.createIndex("Employee", "Name");
 	}
 	
 	public DBApp() throws IOException {
@@ -181,8 +184,77 @@ x.insertIntoTable("Employee2", htblColNameValue3);
        		System.out.println(recman.getNamedObject(strTableName+"_"+strKeyColName));
 	}
 	
-	public void createIndex(String strTableName,String strColName)throws DBAppException{
+	public void createIndex(String strTableName,String strColName)throws DBAppException, IOException{
 		
+		if(isIndexed(strTableName, strColName)){
+			System.out.println("Index alredy exists for table: "+strTableName+" and column "+strColName);
+			return;
+		}
+		if(!tableNameExistsInDB(strTableName)){
+			System.out.println("Table does not exist");
+			return;
+		}
+		if(!colExistsInTable(strTableName, strColName)){
+			System.out.println("Column does not exist");
+			return;
+		}
+		// create a BTree for the new table
+        BTree currentTree = BTree.createInstance( recman, new StringComparator() );
+        recman.setNamedObject( strTableName+"_"+strColName, currentTree.getRecid() );
+        System.out.println( "Created a new empty BTree" );
+       //this.currentTrees.add(currentTree);
+       		System.out.println(recman.getNamedObject(strTableName+"_"+strColName));
+		
+BTree currentPrimeTree = getCurrentTree(strTableName, getPrimaryKey(strTableName));
+System.out.println("Primary Tree: ");
+browser = currentPrimeTree.browse();
+while ( browser.getNext( tuple ) ) {
+    print( tuple );
+}
+int numOfEntries= currentPrimeTree.size();
+System.out.println("num of entries so far:"+ numOfEntries);
+if(numOfEntries==0){
+			System.out.println("Tree created, table has no entries");
+			return;
+		}
+		else{
+			
+			int colIndex = getColumnIndex(strTableName, strColName);
+			for(int i=0;i<=numOfEntries/3;i++){
+				int row=0;
+				String fileName="/home/sameh/workspace1/DBengine/"+strTableName+"_"+i+".txt";
+		        File file=new File(fileName);
+		      BufferedReader  bfr=new BufferedReader(new FileReader(file));
+	  String line2=bfr.readLine();
+	  while((line2)!=null){
+	  	String[] current = line2.split(",");
+	  	
+	  	//inserting a key for the first time
+	  	if(currentTree.find(current[colIndex])==null) {
+	  		System.out.println("inserting a new key");
+	  		currentTree.insert(current[colIndex], i+","+row, false);	
+	  	}
+	  	// insert a key that has been already inserted
+	  	else{
+	  		System.out.println("inserting in an existing key");
+	  		String x = (String) currentTree.find(current[colIndex]);
+	  		x+="/"+i+","+row;
+	  		currentTree.insert(current[colIndex], x, true);
+	  	}
+	  	
+	  	line2=bfr.readLine();
+	  	row++;
+	}
+		}
+			System.out.println(strColName+" Tree: ");
+			 browser = currentTree.browse();
+	            while ( browser.getNext( tuple ) ) {
+	                print( tuple );
+	            }
+							}
+		
+	recman.commit();
+	
 	}
 
 	
@@ -233,12 +305,7 @@ x.insertIntoTable("Employee2", htblColNameValue3);
             }
             BTree currentTree=getCurrentTree(strTableName, getPrimaryKey(strTableName));
     		int enteredSoFar=currentTree.size();
-    		//System.out.println("___________________________");
-    	      // browser = currentTree.browse();
-    	       //while ( browser.getNext( tuple ) ) {
-    	         //  print( tuple );
-    	          // System.out.println("___________________________");
-    	       //}
+    		
             System.out.println("sameh");
             result=result.substring(0, result.length()-1);
             if(enteredSoFar%3==0){
@@ -296,6 +363,27 @@ x.insertIntoTable("Employee2", htblColNameValue3);
 	            	}
 	            	line2=bfr.readLine();
        }
+	            return -1;
+	          
+	            
+		
+}
+	private static int getColumnIndex(String tableName,String colName) throws IOException{
+ 	   int counter=0;   
+ 	   String fileName="/home/sameh/workspace1/DBengine/metadata.txt";
+		        File file=new File(fileName);
+		      BufferedReader  bfr=new BufferedReader(new FileReader(file));
+	            String line2=bfr.readLine();
+	            while((line2)!=null){
+	            	String[] current = line2.split(",");
+	            	if(current[0].equals(tableName)){
+	            		if(current[1].equals(colName)){
+	            			return counter;
+	            		}
+	            		counter++;
+	            	}
+	            	line2=bfr.readLine();
+    }
 	            return -1;
 	          
 	            
@@ -370,7 +458,7 @@ else{
         String line2=bfr.readLine();
         while((line2)!=null){
         	String[] current = line2.split(",");
-        	if(current[0].equals(tableName) && colExistsInTable(tableName, colName)){
+        	if(current[0].equals(tableName)){
         		if(current[1].equals(colName)){
         			return true;
         		}
@@ -395,6 +483,23 @@ else{
     	line2=bfr.readLine();
 }
     return false;
+	}
+	
+	private static boolean columnNameExistsInDB (String tableName, String colName) throws IOException, FileNotFoundException{
+		  String fileName="/home/sameh/workspace1/DBengine/metadata.txt";
+	        File file=new File(fileName);
+	      BufferedReader  bfr=new BufferedReader(new FileReader(file));
+  String line2=bfr.readLine();
+  while((line2)!=null){
+  	String[] current = line2.split(",");
+  	if(current[0].equals(tableName)&&current[1].equals(colName)) {
+  	
+  			return true;
+  		
+  	}
+  	line2=bfr.readLine();
+}
+  return false;
 	}
 	
 
