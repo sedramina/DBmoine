@@ -1,0 +1,4 @@
+TableName,ColoumnName,ColoumnType,Key,Indexed,Refrenced
+Employee, ID, Integer, True, True, null
+Employee, Name, String, False, False, null
+Employee, Age, Integer, False, False, null
