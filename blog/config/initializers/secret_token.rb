@@ -9,4 +9,4 @@
 
 # Make sure your secret_key_base is kept private
 # if you're sharing your code publicly.
-Blog::Application.config.secret_key_base = '2c41d93d37a988a6e53be9c39273b4b62426f2033793c74b6de40757f4257c1d690691036b16a327d4fcea1ae7f694d7da4e6c6124474a955b0cce0292d2aea7'
+Blog::Application.config.secret_key_base = '664613b5c6f508a0578f826cbafa619a1a49a73e65215d29f145a565f05a3df3f64b6c6eb66642dac92bed3dd082900560e6ff39f2d4efea9b56d8c0539f4abb'
